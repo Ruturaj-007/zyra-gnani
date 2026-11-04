@@ -4,53 +4,86 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-# Interviews are deliberately short (3-4 questions) to control Vapi voice-minute cost.
+# Interviews are short: 3 questions by default, hard cap of 4.
 MIN_QUESTIONS = 3
-MAX_QUESTIONS = min(int(os.getenv("MAX_QUESTIONS", "4")), 4)
+MAX_QUESTIONS = max(MIN_QUESTIONS, min(int(os.getenv("MAX_QUESTIONS", "4")), 4))
+DEFAULT_QUESTIONS = 3
 
 Difficulty = Literal["easy", "medium", "hard"]
 
 
-# Tool 1: generateInterview
-class GenerateInterviewRequest(BaseModel):
+# Voice route 1: POST /voice/start
+class VoiceStartRequest(BaseModel):
     role: str
-    type: str = "technical"
     level: str
-    amount: int = MAX_QUESTIONS
     userid: str
     techstack: str = ""
+    type: str = "technical"
+    language: str = "english"
+    amount: int = DEFAULT_QUESTIONS
 
     @field_validator("amount")
     @classmethod
     def cap_amount(cls, v: int) -> int:
-        # Whatever the voice agent asks for, force it into the 3-4 range
         return max(MIN_QUESTIONS, min(v, MAX_QUESTIONS))
 
-    @field_validator("role", "type", "level", "userid", "techstack")
+    @field_validator("role", "level", "userid", "techstack", "type", "language")
     @classmethod
     def strip_text(cls, v: str) -> str:
         return v.strip()
 
 
-class GenerateInterviewResponse(BaseModel):
+class VoiceStartResponse(BaseModel):
     interview_id: str
-    first_question: str
+    language: str
+    question_number: int
+    total_questions: int
+    question_text: str
+    audio_base64: Optional[str] = None  # WAV from Timbre; None if TTS failed (UI shows text)
+    tts_ms: Optional[int] = None
 
 
-# Tool 2: submitAnswer
-class SubmitAnswerRequest(BaseModel):
-    interview_id: str
-    question_number: int = Field(ge=1)
-    answer_transcript: str
+# Voice route 2: POST /voice/answer (multipart: audio file + form fields)
+class VoiceAnswerResponse(BaseModel):
+    # True when no speech was heard. The turn is NOT consumed; the candidate can retry.
+    retry: bool = False
+    transcript: str = ""
+    interview_complete: bool = False
+    question_number: Optional[int] = None  # number of the NEXT question, None when complete
+    total_questions: int = 0
+    next_question: str = ""
+    audio_base64: Optional[str] = None
+    stt_ms: Optional[int] = None
+    llm_ms: Optional[int] = None
+    tts_ms: Optional[int] = None
 
 
-class SubmitAnswerResponse(BaseModel):
-    # Empty string when the interview is complete
-    next_question: str
-    interview_complete: bool
+# Agent internals
+class PlannedQuestion(BaseModel):
+    question_number: int
+    question_text: str
+    difficulty: Difficulty
 
 
-# Tool 3: resumeInterview (called manually via Postman/curl in the demo)
+class Evaluation(BaseModel):
+    """The agent's reasoning about one answer."""
+    verdict: Literal["strong", "adequate", "weak"]
+    score: int = Field(ge=0, le=100)  # average of the three metrics below
+    technical_knowledge: int = Field(ge=0, le=100)
+    problem_solving: int = Field(ge=0, le=100)
+    communication_clarity: int = Field(ge=0, le=100)
+    evidence_quote: str = ""
+    improvement_tip: str = ""
+    reasoning: str
+    next_difficulty: Difficulty
+
+
+class InterviewSummary(BaseModel):
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+
+
+# Resume (read-only durability proof)
 class ResumeInterviewRequest(BaseModel):
     interview_id: str
 
@@ -61,6 +94,14 @@ class TurnOut(BaseModel):
     answer_transcript: str
     ai_reasoning: Optional[str] = None
     score: Optional[int] = None
+    technical_knowledge: Optional[int] = None
+    problem_solving: Optional[int] = None
+    communication_clarity: Optional[int] = None
+    evidence_quote: Optional[str] = None
+    improvement_tip: Optional[str] = None
+    stt_ms: Optional[int] = None
+    llm_ms: Optional[int] = None
+    tts_ms: Optional[int] = None
     timestamp: datetime
 
 
@@ -73,26 +114,24 @@ class ResumeInterviewResponse(BaseModel):
     interview_complete: bool
 
 
-# Agent internals (used by agent.py, never sent to Vapi)
-class PlannedQuestion(BaseModel):
-    question_number: int
-    question_text: str
-    difficulty: Difficulty
-
-
-class Evaluation(BaseModel):
-    """The agent's reasoning about one answer."""
-    verdict: Literal["strong", "adequate", "weak"]
-    score: int = Field(ge=0, le=100)
-    reasoning: str
-    next_difficulty: Difficulty
-
-
-# Trace timeline: GET /trace/{interview_id}
+# Trace / results: GET /trace/{interview_id}
 class PlanItemOut(BaseModel):
     question_number: int
     question_text: str
     difficulty: Difficulty
+
+
+class MetricAverages(BaseModel):
+    technical_knowledge: Optional[int] = None
+    problem_solving: Optional[int] = None
+    communication_clarity: Optional[int] = None
+
+
+class LatencyAverages(BaseModel):
+    """Averages of MEASURED per-turn latencies, in milliseconds. None if nothing measured."""
+    stt_ms: Optional[int] = None
+    llm_ms: Optional[int] = None
+    tts_ms: Optional[int] = None
 
 
 class TraceResponse(BaseModel):
@@ -101,14 +140,14 @@ class TraceResponse(BaseModel):
     role: str
     level: str
     techstack: str
+    language: str = "english"
     status: str
     current_checkpoint: int
     created_at: datetime
     plan: list[PlanItemOut]
     turns: list[TurnOut]
     average_score: Optional[float] = None  # None until the first answer is scored
-
-
-class LatestInterviewResponse(BaseModel):
-    """For the UI to find the interview that was just created during a call."""
-    interview_id: Optional[str] = None
+    overall_score: Optional[int] = None  # set at completion
+    summary: Optional[InterviewSummary] = None  # set at completion
+    metric_averages: MetricAverages = MetricAverages()
+    latency_averages: LatencyAverages = LatencyAverages()
