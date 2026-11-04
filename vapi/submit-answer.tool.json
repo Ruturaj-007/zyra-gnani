@@ -1,0 +1,25 @@
+{
+  "type": "apiRequest",
+  "name": "submitAnswer",
+  "description": "Call after EVERY candidate answer, before speaking. Returns next_question to speak and interview_complete.",
+  "method": "POST",
+  "url": "https://exostosed-deacon-encephalographically.ngrok-free.dev/tools/submit-answer",
+  "body": {
+    "type": "object",
+    "properties": {
+      "interview_id": {
+        "type": "string",
+        "description": "The interview_id returned by generateInterview."
+      },
+      "question_number": {
+        "type": "number",
+        "description": "Number of the question just answered: 1 for the first answer, then 2, 3, 4."
+      },
+      "answer_transcript": {
+        "type": "string",
+        "description": "The candidate's answer, as spoken."
+      }
+    },
+    "required": ["interview_id", "question_number", "answer_transcript"]
+  }
+}
