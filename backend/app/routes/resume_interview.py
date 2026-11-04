@@ -3,12 +3,12 @@ from fastapi import APIRouter, HTTPException
 from app import db
 from app.schemas import ResumeInterviewRequest, ResumeInterviewResponse
 
-router = APIRouter(prefix="/tools", tags=["vapi-tools"])
+router = APIRouter(prefix="/interview", tags=["interview"])
 
 
 @router.post("/resume-interview", response_model=ResumeInterviewResponse)
 def resume_interview(body: ResumeInterviewRequest) -> ResumeInterviewResponse:
-    """Vapi tool 3: prove durability.
+    """Prove durability.
 
     Everything lives in Postgres, not in server memory, so an interview can be
     picked up after a dropped call or a server restart. This route only reads;

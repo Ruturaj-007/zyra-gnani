@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import db
-from app.routes import generate_interview, resume_interview, submit_answer, trace
+from app.routes import resume_interview, trace, voice
 
 load_dotenv()
 
@@ -27,9 +27,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Zyra.ai",
-    description="Agentic AI voice interview platform",
-    version="0.1.0",
+    title="Zyra on Gnani",
+    description="Agentic AI voice interviewer using Gnani Prisma (STT) and Timbre (TTS)",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -41,18 +41,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Vapi tool routes
-app.include_router(generate_interview.router)
-app.include_router(submit_answer.router)
-app.include_router(resume_interview.router)
+# Voice loop: POST /voice/start, POST /voice/answer
+app.include_router(voice.router)
 
-# Trace routes for the timeline UI
+# Durability proof (read-only) and results data for the UI
+app.include_router(resume_interview.router)
 app.include_router(trace.router)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "zyra.ai"}
+    return {"status": "ok", "service": "zyra-on-gnani"}
 
 
 @app.get("/health/db")
