@@ -49,6 +49,22 @@ CREATE INDEX IF NOT EXISTS idx_sessions_candidate
     ON sessions (candidate_id, created_at DESC);
 """
 
+# Additive changes only (safe to run on every start). The base tables above stay as they were.
+MIGRATIONS_SQL = """
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS language      TEXT NOT NULL DEFAULT 'english';
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS overall_score INTEGER;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS summary       TEXT;
+
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS technical_knowledge  INTEGER;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS problem_solving      INTEGER;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS communication_clarity INTEGER;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS evidence_quote       TEXT;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS improvement_tip      TEXT;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS stt_ms               INTEGER;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS llm_ms               INTEGER;
+ALTER TABLE turns ADD COLUMN IF NOT EXISTS tts_ms               INTEGER;
+"""
+
 pool: ConnectionPool | None = None
 
 
@@ -83,6 +99,7 @@ def get_conn():
 
 
 def init_db() -> None:
-    """Create the three tables if they don't exist yet."""
+    """Create the tables if they don't exist, then add the newer columns."""
     with get_conn() as conn:
         conn.execute(SCHEMA_SQL)
+        conn.execute(MIGRATIONS_SQL)
