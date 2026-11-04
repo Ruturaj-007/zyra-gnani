@@ -12,21 +12,20 @@ function scoreColor(score: number) {
   return "bg-destructive-100";
 }
 
-function ScoreBar({ score }: { score: number }) {
+function MetricBar({ label, score }: { label: string; score: number | null }) {
+  if (score === null) return null;
   return (
-    <div className="flex items-center gap-3" role="img" aria-label={`Score ${score} out of 100`}>
+    <div className="flex items-center gap-3" role="img" aria-label={`${label} ${score} out of 100`}>
+      <span className="text-sm text-light-400 w-44 shrink-0">{label}</span>
       <div className="h-2 flex-1 rounded-full bg-dark-200 overflow-hidden">
-        <div
-          className={cn("h-full rounded-full", scoreColor(score))}
-          style={{ width: `${Math.max(2, Math.min(100, score))}%` }}
-        />
+        <div className={cn("h-full rounded-full", scoreColor(score))} style={{ width: `${Math.max(2, Math.min(100, score))}%` }} />
       </div>
       <span className="text-sm font-bold text-white w-14 text-right">{score}/100</span>
     </div>
   );
 }
 
-// One entry per planned question: what was asked, what was said, how the agent reasoned
+// One entry per planned question: what was asked, what was said, the three metrics, evidence and a tip
 export default function TraceTimeline({ trace }: { trace: Trace }) {
   const turnByNumber = new Map(trace.turns.map((t) => [t.turn_number, t]));
 
@@ -50,14 +49,9 @@ export default function TraceTimeline({ trace }: { trace: Trace }) {
               {!isLast && <span className="w-px flex-1 bg-light-600/60 my-1" />}
             </div>
 
-            <div className={cn("flex flex-col gap-3 flex-1", !isLast && "pb-8")}>
+            <div className={cn("flex flex-col gap-3 flex-1 min-w-0", !isLast && "pb-8")}>
               <div className="flex flex-wrap items-center gap-3">
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-semibold capitalize",
-                    DIFFICULTY_STYLE[item.difficulty]
-                  )}
-                >
+                <span className={cn("rounded-full px-3 py-1 text-xs font-semibold capitalize", DIFFICULTY_STYLE[item.difficulty])}>
                   {item.difficulty}
                 </span>
                 {!turn && <span className="text-sm text-light-400">Not answered yet</span>}
@@ -68,15 +62,33 @@ export default function TraceTimeline({ trace }: { trace: Trace }) {
               {turn && (
                 <div className="dark-gradient rounded-2xl p-5 flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm text-light-400">Your answer</span>
+                    <span className="text-sm text-light-400">What Gnani Prisma heard</span>
                     <p className="text-light-100">{turn.answer_transcript}</p>
                   </div>
 
-                  {turn.score !== null && <ScoreBar score={turn.score} />}
+                  <div className="flex flex-col gap-2 border-t border-light-800 pt-4">
+                    <MetricBar label="Technical knowledge" score={turn.technical_knowledge} />
+                    <MetricBar label="Problem solving" score={turn.problem_solving} />
+                    <MetricBar label="Communication clarity" score={turn.communication_clarity} />
+                  </div>
+
+                  {turn.evidence_quote && (
+                    <blockquote className="border-l-2 border-primary-200 pl-4 flex flex-col gap-1">
+                      <span className="text-sm text-light-400">Evidence from your own words</span>
+                      <p className="text-white italic">&ldquo;{turn.evidence_quote}&rdquo;</p>
+                    </blockquote>
+                  )}
+
+                  {turn.improvement_tip && (
+                    <div className="rounded-xl bg-primary-200/10 px-4 py-3 flex flex-col gap-1">
+                      <span className="text-sm text-primary-200 font-semibold">How to improve</span>
+                      <p className="text-light-100">{turn.improvement_tip}</p>
+                    </div>
+                  )}
 
                   {turn.ai_reasoning && (
                     <div className="flex flex-col gap-1 border-t border-light-800 pt-4">
-                      <span className="text-sm text-light-400">How Riley reasoned</span>
+                      <span className="text-sm text-light-400">How Zyra reasoned</span>
                       <p className="text-light-100">{turn.ai_reasoning}</p>
                     </div>
                   )}

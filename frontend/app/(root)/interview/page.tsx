@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Agent from "@/components/Agent";
-import { getCandidate, getSetup } from "@/lib/candidate";
+import { getCandidate, getSetup, languageLabel } from "@/lib/candidate";
 
 export default function Interview() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function Interview() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold capitalize">{setup.role} interview</h1>
         <p className="text-sm text-gray-400">
-          {setup.type} · {setup.level}
+          {setup.type} · {setup.level} · {languageLabel(setup.language)}
           {setup.techstack ? ` · ${setup.techstack}` : ""}
         </p>
       </div>

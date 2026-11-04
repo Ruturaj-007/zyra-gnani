@@ -9,8 +9,8 @@ const monaSans = Mona_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Zyra.ai",
-  description: "Agentic AI voice interviewer that adapts to every answer",
+  title: "Zyra on Gnani",
+  description: "Agentic AI voice interviewer in English, Hindi, Hinglish and Marathi, powered by Gnani Prisma and Timbre",
 };
 
 export default function RootLayout({

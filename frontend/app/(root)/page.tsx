@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { createCandidate, saveSetup } from "@/lib/candidate";
+import { createCandidate, LANGUAGES, saveSetup } from "@/lib/candidate";
+import { pingBackend } from "@/lib/api";
 
 const LEVELS = ["Junior", "Mid", "Senior"];
 const TYPES = ["Technical", "Behavioral", "Mixed"];
@@ -51,7 +52,13 @@ export default function Home() {
   const [techstack, setTechstack] = useState("");
   const [level, setLevel] = useState("Junior");
   const [type, setType] = useState("Technical");
+  const [language, setLanguage] = useState<LanguageKey>("english");
   const [error, setError] = useState("");
+
+  // Wake the free-tier backend while the person fills in the form
+  useEffect(() => {
+    pingBackend();
+  }, []);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -65,6 +72,7 @@ export default function Home() {
       level,
       techstack: techstack.trim(),
       type,
+      language,
     });
     router.push("/interview");
   };
@@ -75,8 +83,9 @@ export default function Home() {
         <div className="flex flex-col gap-6 max-w-lg">
           <h2>Practice a real interview. Get questions that adapt to you.</h2>
           <p className="text-lg">
-            Riley, an AI interviewer, listens to each answer, scores it, and makes the next question
-            harder or easier. A 3 to 4 minute voice call, then a full breakdown of how she reasoned.
+            Zyra, an AI interviewer, speaks each question, listens to your answer, scores it, and makes the
+            next question harder or easier. Pick English, Hindi, Hinglish or Marathi. Powered by Gnani
+            Prisma and Timbre.
           </p>
         </div>
 
@@ -140,6 +149,16 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <span className="text-light-100">Question focus</span>
             <Choice options={TYPES} value={type} onChange={setType} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-light-100">Interview language</span>
+            <Choice
+              options={LANGUAGES.map((l) => l.label)}
+              value={LANGUAGES.find((l) => l.key === language)?.label ?? "English"}
+              onChange={(label) => setLanguage(LANGUAGES.find((l) => l.label === label)?.key ?? "english")}
+            />
+            <p className="text-sm text-light-400">Questions are written and spoken in this language.</p>
           </div>
 
           {error && <p className="text-destructive-100">{error}</p>}

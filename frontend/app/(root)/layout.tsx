@@ -8,7 +8,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <nav>
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logo.svg" alt="Zyra.ai logo" width={38} height={32} />
-          <h2 className="text-primary-100">Zyra.ai</h2>
+          <h2 className="text-primary-100">Zyra.ai <span className="text-sm font-normal text-light-400">on Gnani</span></h2>
         </Link>
       </nav>
       {children}
