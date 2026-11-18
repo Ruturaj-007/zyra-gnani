@@ -9,5 +9,6 @@ __pycache__/
 .gitignore
 .pytest_cache/
 .DS_Store
-Dockerfile
-.dockerignore
+*.wav
+dry_run.py
+audio_test.py
