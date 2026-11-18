@@ -92,6 +92,7 @@ export async function startRecording(options: RecorderOptions = {}): Promise<Rec
   });
 
   const audioCtx = new AudioContext();
+  void audioCtx.resume(); // Safari and iOS can start the context suspended
   const analyser = audioCtx.createAnalyser();
   analyser.fftSize = 1024;
   audioCtx.createMediaStreamSource(stream).connect(analyser);

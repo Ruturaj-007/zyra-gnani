@@ -173,6 +173,11 @@ def submit_answer_core(
             answer=answer_transcript,
             language=language,
         )
+        # Adjust from the NEXT planned question: strong = harder, weak = easier, otherwise keep the plan
+        if checkpoint < total:
+            ev.next_difficulty = agent.decide_next_difficulty(
+                by_number[checkpoint + 1]["difficulty"], ev.verdict
+            )
         reasoning = f"{ev.verdict.upper()}: {ev.reasoning}"
 
         is_last = checkpoint >= total

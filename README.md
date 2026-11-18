@@ -1,16 +1,18 @@
+<!-- (.venv) C:\Users\noobe\Desktop\AI\zyra-gnani\backend>uvicorn app.main:app --reload --port 8000 -->
+
 # Zyra.ai
 
 **An agentic AI voice interviewer for students who can't afford a human mock interview.**
 
 Riley conducts a short voice interview (3 to 4 questions, about 3 to 4 minutes), scores every answer, and rewrites the next question to be harder or easier depending on how the candidate did. Every decision is saved, so the full reasoning can be replayed as a timeline and an interrupted interview can be resumed.
 
-Built for **IGNISIA HACAKTHON 2026** | Domain: EdTech 
+Built for **IGNISIA HACAKTHON 2026** | Domain: EdTech
 
-| | |
-| --- | --- |
-| Live app | `<NETLIFY_URL>` |
-| Live API | `<RENDER_URL>/docs` |
-| Demo video | `<VIDEO_URL>` |
+|            |                     |
+| ---------- | ------------------- |
+| Live app   | `<NETLIFY_URL>`     |
+| Live API   | `<RENDER_URL>/docs` |
+| Demo video | `<VIDEO_URL>`       |
 
 ## The problem
 
@@ -35,13 +37,13 @@ Students outside the big metros rarely get realistic interview practice. Human m
 
 ## Why it is agentic (not a wrapper)
 
-| Step | What happens |
-| --- | --- |
-| Plan | `generateInterview` plans 3 to 4 questions with escalating difficulty and saves the plan |
-| Observe and reason | `submitAnswer` scores each answer with an LLM and decides the next difficulty |
-| Replan | The next question is rewritten when the difficulty changes, and the plan is updated |
-| Act and persist | Turn, score, reasoning and checkpoint are written to Postgres |
-| Recover | `resumeInterview` restores an interview from its checkpoint, even after a server restart |
+| Step               | What happens                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| Plan               | `generateInterview` plans 3 to 4 questions with escalating difficulty and saves the plan |
+| Observe and reason | `submitAnswer` scores each answer with an LLM and decides the next difficulty            |
+| Replan             | The next question is rewritten when the difficulty changes, and the plan is updated      |
+| Act and persist    | Turn, score, reasoning and checkpoint are written to Postgres                            |
+| Recover            | `resumeInterview` restores an interview from its checkpoint, even after a server restart |
 
 Design choices that make it reliable on a live call:
 
@@ -64,12 +66,12 @@ Browser (Next.js)  --voice-->  Vapi assistant "Riley"
                                  Neon Postgres: sessions, interview_plans, turns
 ```
 
-| Route | Purpose |
-| --- | --- |
-| `POST /tools/generate-interview` | Vapi tool: plan and save the interview, return the first question |
-| `POST /tools/submit-answer` | Vapi tool: score the answer, adapt, return the next question or completion |
-| `POST /tools/resume-interview` | Restore checkpoint, history and next question (demonstrated via curl or Postman) |
-| `GET /trace/{interview_id}` | Plan, turns, scores and AI reasoning for the timeline UI |
+| Route                            | Purpose                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------- |
+| `POST /tools/generate-interview` | Vapi tool: plan and save the interview, return the first question                |
+| `POST /tools/submit-answer`      | Vapi tool: score the answer, adapt, return the next question or completion       |
+| `POST /tools/resume-interview`   | Restore checkpoint, history and next question (demonstrated via curl or Postman) |
+| `GET /trace/{interview_id}`      | Plan, turns, scores and AI reasoning for the timeline UI                         |
 
 Vapi tool definitions live in [`vapi/`](vapi/). There is no login: a candidate is a name plus a random id kept in the browser.
 

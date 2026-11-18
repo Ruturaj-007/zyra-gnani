@@ -77,6 +77,32 @@ def clean_for_voice(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     return text.strip('"\u201c\u201d ').strip()
 
+_DEVANAGARI = re.compile(r"[\u0900-\u097F]")
+_HINGLISH_WORDS = {
+    "aap", "aapka", "aapke", "kaise", "kya", "batayiye", "bataiye", "samjhaiye", "dijiye", "kijiye",
+    "mein", "hai", "hain", "ke", "ka", "ki", "se", "ko", "aur", "agar", "kaun", "kyun", "karenge",
+    "karte", "karoge", "apne", "apna", "jab", "ye", "yeh", "woh", "kab", "kitna", "liye", "batao",
+    "banayenge",
+}
+
+LANGUAGE_EXAMPLE = {
+    "english": "",
+    "hinglish": 'Every question MUST be Hinglish (Hindi in Roman letters mixed with English terms), like this example: "Aap FastAPI mein ek simple GET endpoint kaise banayenge?" Do not write plain English. ',
+    "hindi": 'Every question MUST be in Devanagari Hindi, like this example: "FastAPI में एक GET endpoint कैसे बनाते हैं?" ',
+    "marathi": 'Every question MUST be in Devanagari Marathi, like this example: "FastAPI मध्ये GET endpoint कसा बनवायचा?" ',
+}
+
+
+def _in_language(text: str, language: str) -> bool:
+    """True if the question is really written in the requested language."""
+    lang = (language or "english").lower()
+    if lang in ("hindi", "marathi"):
+        return bool(_DEVANAGARI.search(text))
+    if lang == "hinglish":
+        words = re.findall(r"[a-z]+", text.lower())
+        return sum(1 for w in words if w in _HINGLISH_WORDS) >= 2 and not _DEVANAGARI.search(text)
+    return True
+
 
 def _focus(role: str, techstack: str) -> str:
     return techstack.strip() or role
@@ -151,7 +177,8 @@ def plan_interview(
     )
     user = (
         f"Role: {role}\nExperience level: {level}\nTech stack: {techstack or 'not specified'}\n"
-        f"Focus: {interview_type} questions\nLanguage to write in: {_style(language)}\n\n"
+        f"Focus: {interview_type} questions\nLanguage to write in: {_style(language)}\n"
+        f"{LANGUAGE_EXAMPLE.get((language or 'english').lower(), '')}\n\n"
         f"Write exactly {len(tags)} questions in this order:\n{numbered}\n\n"
         "Rules: each question is one sentence, under 25 words and under 200 characters, "
         "easy to understand when spoken aloud, tailored to the role and level. "
@@ -166,7 +193,10 @@ def plan_interview(
             raise ValueError(f"expected {len(tags)} questions, got {len(questions)}")
         questions = questions[: len(tags)]
         # A question too long to speak in one TTS request is swapped for the template one
-        questions = [q if len(q) <= MAX_QUESTION_CHARS else fallback[i] for i, q in enumerate(questions)]
+        questions = [
+            q if (len(q) <= MAX_QUESTION_CHARS and _in_language(q, language)) else fallback[i]
+            for i, q in enumerate(questions)
+        ]
     except Exception as exc:
         log.warning("plan_interview fell back to template questions: %s", exc)
         questions = fallback
@@ -263,7 +293,7 @@ def evaluate_answer(
     )
     user = (
         f"Role: {role}\nLevel: {level}\nQuestion difficulty: {difficulty}\n"
-        f"Interview language: {_style(language)}\n"
+        "The answer may be in Hindi, Hinglish or Marathi: write ALL feedback in English.\n"
         f"Question: {question}\n\nCandidate answer: {answer}"
     )
 
@@ -305,7 +335,7 @@ def adapt_question(
     )
     user = (
         f"Role: {role}\nLevel: {level}\nTech stack: {techstack or 'not specified'}\n"
-        f"Language to write in: {_style(language)}\n"
+        f"Language to write in: {_style(language)}\n{LANGUAGE_EXAMPLE.get((language or 'english').lower(), '')}"
         f"Previous question: {previous_question}\nCandidate's answer: {previous_answer}\n"
         f"Originally planned next question: {planned_question}\n\n"
         f"Rewrite the next question so it is {target_difficulty} difficulty. Keep the same general topic "
@@ -315,7 +345,7 @@ def adapt_question(
     try:
         data = _chat_json(system, user, max_tokens=900, temperature=0.4)
         question = clean_for_voice(str(data.get("question", "")))
-        if not question or len(question) > MAX_QUESTION_CHARS:
+        if not question or len(question) > MAX_QUESTION_CHARS or not _in_language(question, language):
             raise ValueError("empty or oversized question")
         return question
     except Exception as exc:
