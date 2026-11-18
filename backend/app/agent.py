@@ -87,9 +87,14 @@ _HINGLISH_WORDS = {
 
 LANGUAGE_EXAMPLE = {
     "english": "",
-    "hinglish": 'Every question MUST be Hinglish (Hindi in Roman letters mixed with English terms), like this example: "Aap FastAPI mein ek simple GET endpoint kaise banayenge?" Do not write plain English. ',
-    "hindi": 'Every question MUST be in Devanagari Hindi, like this example: "FastAPI में एक GET endpoint कैसे बनाते हैं?" ',
-    "marathi": 'Every question MUST be in Devanagari Marathi, like this example: "FastAPI मध्ये GET endpoint कसा बनवायचा?" ',
+    "hinglish": 'Every question MUST be Hinglish (Hindi in Roman letters mixed with English technical terms). Style example only, on an unrelated topic: "Aap ek naya feature release karne se pehle kaun se checks karte hain?" Write questions about the role and tech stack, not about this example topic. ',
+    "hindi": 'Every question MUST be in Devanagari Hindi. Style example only, on an unrelated topic: "नया फीचर रिलीज़ करने से पहले आप कौन से चेक करते हैं?" Write questions about the role and tech stack, not about this example topic. ',
+    "marathi": 'Every question MUST be in Devanagari Marathi. Style example only, on an unrelated topic: "नवीन फीचर रिलीज करण्यापूर्वी तुम्ही कोणत्या तपासण्या करता?" Write questions about the role and tech stack, not about this example topic. ',
+}
+
+LANGUAGE_EXAMPLE = {
+    k: (v + "Use it for language style only; never reuse its topic or wording. " if v else v)
+    for k, v in LANGUAGE_EXAMPLE.items()
 }
 
 
@@ -394,6 +399,7 @@ def summarize_interview(role: str, level: str, turns: list[dict]) -> tuple[int, 
     system = (
         "You are an interviewer writing a short summary for a candidate from a spoken-interview transcript. "
         "Do not comment on confidence, tone or cultural fit. Use plain, kind, specific language in English. "
+        "Only list a strength if an answer actually showed it with specifics; saying what one would do is not evidence. "
         'Respond with JSON only: {"strengths": ["...", "..."], "weaknesses": ["...", "..."]} '
         "with 2 to 3 items each, every item under 20 words."
     )
